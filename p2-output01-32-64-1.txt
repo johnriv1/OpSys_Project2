@@ -1,0 +1,107 @@
+time 0ms: Simulator started (Contiguous -- First-Fit)
+time 0ms: Process B arrived (requires 45 frames)
+time 0ms: Placed process B:
+================================
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBB...................
+================================
+time 350ms: Process B removed:
+================================
+................................
+................................
+================================
+time 350ms: Process A arrived (requires 28 frames)
+time 350ms: Placed process A:
+================================
+AAAAAAAAAAAAAAAAAAAAAAAAAAAA....
+................................
+================================
+time 400ms: Process B arrived (requires 45 frames)
+time 400ms: Cannot place process B -- skipped!
+time 3000ms: Process A removed:
+================================
+................................
+................................
+================================
+time 3000ms: Simulator ended (Contiguous -- First-Fit)
+
+time 0ms: Simulator started (Contiguous -- Next-Fit)
+time 0ms: Process B arrived (requires 45 frames)
+time 0ms: Placed process B:
+================================
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBB...................
+================================
+time 350ms: Process B removed:
+================================
+................................
+................................
+================================
+time 350ms: Process A arrived (requires 28 frames)
+time 350ms: Placed process A:
+================================
+AAAAAAAAAAAAAAAAAAAAAAAAAAAA....
+................................
+================================
+time 400ms: Process B arrived (requires 45 frames)
+time 400ms: Cannot place process B -- skipped!
+time 3000ms: Process A removed:
+================================
+................................
+................................
+================================
+time 3000ms: Simulator ended (Contiguous -- Next-Fit)
+
+time 0ms: Simulator started (Contiguous -- Best-Fit)
+time 0ms: Process B arrived (requires 45 frames)
+time 0ms: Placed process B:
+================================
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBB...................
+================================
+time 350ms: Process B removed:
+================================
+................................
+................................
+================================
+time 350ms: Process A arrived (requires 28 frames)
+time 350ms: Placed process A:
+================================
+AAAAAAAAAAAAAAAAAAAAAAAAAAAA....
+................................
+================================
+time 400ms: Process B arrived (requires 45 frames)
+time 400ms: Cannot place process B -- skipped!
+time 3000ms: Process A removed:
+================================
+................................
+................................
+================================
+time 3000ms: Simulator ended (Contiguous -- Best-Fit)
+
+time 0ms: Simulator started (Non-Contiguous)
+time 0ms: Process B arrived (requires 45 frames)
+time 0ms: Placed process B:
+================================
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBB...................
+================================
+time 350ms: Process B removed:
+================================
+................................
+................................
+================================
+time 350ms: Process A arrived (requires 28 frames)
+time 350ms: Placed process A:
+================================
+AAAAAAAAAAAAAAAAAAAAAAAAAAAA....
+................................
+================================
+time 400ms: Process B arrived (requires 45 frames)
+time 400ms: Cannot place process B -- skipped!
+time 3000ms: Process A removed:
+================================
+................................
+................................
+================================
+time 3000ms: Simulator ended (Non-Contiguous)
