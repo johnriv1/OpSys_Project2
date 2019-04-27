@@ -58,6 +58,28 @@ typedef struct
 	int rem_run_time;
 }  Process;
 
+int compare_process(const void *p1, const void *p2)
+{
+	const Process *elem1 = p1;    
+   const Process *elem2 = p2;
+   
+   if (elem1->arrival_time < elem2->arrival_time)
+      return -1;
+   else if (elem1->arrival_time > elem2->arrival_time)
+      return 1;
+   else
+   {
+   	if (elem1->process_id < elem2->process_id)
+   	{
+   		return -1;
+   	}
+   	else
+   	{
+   		return 0;
+   	}
+   }
+}
+
 void print_memory(char* Physical_Memory, int frames_per_line, int total_frames)
 {
 	
@@ -219,6 +241,13 @@ int main(int argc, char const *argv[])
 	printf("\n");
 	#endif
 
+	qsort(all_processes, all_processes_size, sizeof(Process), compare_process);
+	
+	#if DEBUG_MODE
+	print_processes(all_processes,all_processes_size);
+	printf("\n");
+	#endif
+	
 	free(Physical_Memory);
 	free(line);
 	free(all_processes);
