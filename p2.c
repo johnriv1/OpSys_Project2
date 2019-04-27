@@ -1,6 +1,52 @@
 #include <stdio.h>  /* printf */
 #include <stdlib.h> /* EXIT_SUCCESS, EXIT_FAILURE, malloc, free */
 
+/*
+	as file parsed, put event "intervals" into array. Sort by arrival times (if equal, alphabetical order)
+		each object in array has variables: arrival_time, p_mem, run_time, rem_run_time, process_id
+		
+		as they arrive, will put them in memory if arrival_time < current_time
+		
+		after every advancment of time, increment rem_run_time
+			keep track of next process that will finish (pointer)
+			
+	If next process arrival time < next process finish time
+		attempt to load in next process
+		else if next process arrival time > next process finish time
+			take out process from physical memory
+		else if next process arrival time = next process finish time
+			take out process
+			attempt to load in next process
+		
+	"attempt to load in next process" fnction
+		will take as input memory array, process being loaded in, and alg("best fit", "next fit", ect.)
+		
+		first_fit: loop through memory starting from i = 0
+			when '.' is reached, record i. keep looping until != '.' is reached. 
+			If (i - recorded_i) >= process.p_mem
+			{
+				for (int k = recordedi, k < process.p_mem; k++)
+				{
+					memory[k] = process.id
+				}
+				break;
+			}
+			else
+			{
+				keep looping through until end of memory is reached
+				if end is reached -> defragment if process didnt have enough space but there is enough total memory
+			}
+			
+		next_fit: keep index of last loaded message recorded
+			can also loop back to beginning of memory
+			
+		best_fit: record all indexes in momory where process can fit, compare and choose
+		
+	defragment function:
+	
+	removal function:
+		
+*/
 void print_memory(char* Physical_Memory, int frames_per_line, int total_frames)
 {
 	
