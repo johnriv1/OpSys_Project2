@@ -116,6 +116,11 @@ void print_processes(Process* all_processes,int all_processes_size)
 	}
 }
 
+void update_times(Process*** Mem_Processes, int time_passed)
+{
+	/*this function will loop through Mem_Processes and decrease their rem_run_times by appropriate amount*/
+}
+
 int main(int argc, char const *argv[])
 {
 	if (argc != 5)
@@ -247,6 +252,45 @@ int main(int argc, char const *argv[])
 	print_processes(all_processes,all_processes_size);
 	printf("\n");
 	#endif
+	
+	/* this index will indicate the process in all_processes that is next to arrive */
+	int next_arrival_index = 0;
+	/* in our update rem_time function, we'll also update the value of next_finishinf_process */
+	Process* next_finishing_process = NULL;
+	/* will also set up an array of pointers to (structure in memory) so that we don't have to check if every process in all_processes is in memory when updating rem_time */
+	Process** Mem_Processes = NULL;
+	int time = 0;
+	/*the following variable will be decreased when process is loaded into memory and increased when taken out of memory*/
+	/*will be needed to see if we should do defragmentation or if we should skip process*/
+	int total_free_memory = total_frames;
+	
+	/* below will end up being in a while (not finished conditon) loop */
+	/* make sure time passed value is reset every loop */
+		int time_passed = 0;
+		if ((next_finishing_process == NULL) || 
+			(all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time)))
+		{
+			time_passed = all_processes[next_arrival_index].arrival_time - time; 
+			time = all_processes[next_arrival_index].arrival_time;
+			next_arrival_index ++;
+			/* attempt to put process in Memory */
+			/* will be a function that take in best fit, next fit, or first fit as variables*/
+			/* will also take Mem_Processes and probably a pointer the process being loaded in*/
+			/* make it return indicator about whether process loaded in or not */
+			/* if it didnt load in, check if there is enough total free memory */
+			/* if so, defragment and then load in process into memory */
+			/* if not, skip -> advance next arrival index without loading anything into memory */
+		}
+		else if (all_processes[next_arrival_index].arrival_time >= (next_finishing_process->rem_run_time + time))
+		{
+			time_passed = next_finishing_process->rem_run_time;
+			time += next_finishing_process->rem_run_time;
+			/* take process out of Memory */
+			/* will involve changing process id character into '.' in Physical_Memory array */
+			/* will also involve taking pointer to process out of Mem_Processes */
+		}
+		update_times( &Mem_Processes, time_passed);
+	
 	
 	free(Physical_Memory);
 	free(line);
