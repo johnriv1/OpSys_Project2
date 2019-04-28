@@ -116,7 +116,7 @@ void print_processes(Process* all_processes,int all_processes_size)
 	}
 }
 
-int defragmentation()
+void defragmentation()
 {
 
 }
@@ -124,9 +124,29 @@ int defragmentation()
 /* TURN ALL OF THE APPROPRIATE LETTERS BACK INTO '.' 
    AND REMOVE PROCESS FROM Mem_Processes
    AND DECREMENT num_processes_in_memory */
-int remove_process()
+void remove_process(char** Physical_Memory, Process*** Mem_Processes, int* num_processes_in_memory, int* total_free_memory, Process** process_being_removed)
 {
-
+	for (int i = 0; i < strlen(*Physical_Memory); i++)
+	{
+		if ((*Physical_Memory)[i] == (*process_being_removed)->process_id)
+		{
+			(*Physical_Memory)[i] = '.';
+		}
+	}
+	for (int i = 0; i < (*num_processes_in_memory); i++)
+	{
+		if (((*Mem_Processes)[i])->process_id == (*process_being_removed)->process_id)
+		{
+			for (int k = i; k < (*num_processes_in_memory - 1); k++)
+			{
+				(*Mem_Processes)[i] = (*Mem_Processes)[i+1];
+			}
+			(*num_processes_in_memory)--;
+			(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
+			break;
+		}
+	}
+	total_free_memory += (*process_being_removed)->p_mem;
 }
 
 int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes, 
@@ -208,7 +228,15 @@ void update_times(Process*** Mem_Processes, int num_processes_in_memory, int tim
 	int least_rem_run_time;
 	if ((*next_finishing_process) == NULL)
 	{
-		least_rem_run_time = 0;
+		if (num_processes_in_memory >= 1)
+		{
+			least_rem_run_time = ((*Mem_Processes)[0]->rem_run_time) + 1;
+		}
+		else
+		{
+			/*arbitrary value since it doesnt matter if no processes are in memory*/
+			least_rem_run_time = 0;
+		}
 	}
 	else
 	{
@@ -217,6 +245,8 @@ void update_times(Process*** Mem_Processes, int num_processes_in_memory, int tim
 	for (int i = 0; i < num_processes_in_memory; i++)
 	{
 		(*Mem_Processes)[i]->rem_run_time -= time_passed;
+		printf("time_passed is %d\n", time_passed); 
+		printf("Process %c has rem_run_time %d\n", (*Mem_Processes)[i]->process_id,(*Mem_Processes)[i]->rem_run_time);
 		if (least_rem_run_time > ((*Mem_Processes)[i]->rem_run_time))
 		{
 			(*next_finishing_process) = (*Mem_Processes)[i];
@@ -371,11 +401,12 @@ int main(int argc, char const *argv[])
 	printf("time %dms: Simulator started (Contigious -- First-Fit)\n", time);
 	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
 	{
+		//printf("HELLO\n");
 		int time_passed = 0;
 		if ((next_arrival_index < all_processes_size) && ((next_finishing_process == NULL) || (all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time))))
 		{
-			printf("Process %c arrived (requires %d frames)\n", all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
-			time_passed = all_processes[next_arrival_index].arrival_time - time; 
+			printf("time %d: Process %c arrived (requires %d frames)\n", time,  all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
+			time_passed = all_processes[next_arrival_index].arrival_time - time;
 			time = all_processes[next_arrival_index].arrival_time;
 			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
 			/* if it didnt load in, check if there is enough total free memory */
@@ -395,13 +426,13 @@ int main(int argc, char const *argv[])
 				}
 				else
 				{
-					printf("Time %d: Cannot place process %c -- skipped!\n", time, all_processes[next_arrival_index].process_id);
+					printf("time %d: Cannot place process %c -- skipped!\n", time, all_processes[next_arrival_index].process_id);
 					next_arrival_index ++;
 				}
 			}
 			else
 			{
-				printf("Placed process %c\n", all_processes[next_arrival_index].process_id);
+				printf("time %d: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
 				print_memory(Physical_Memory, frames_per_line, total_frames);
 				next_arrival_index ++;
 			}
@@ -410,12 +441,16 @@ int main(int argc, char const *argv[])
 		{
 			time_passed = next_finishing_process->rem_run_time;
 			time += next_finishing_process->rem_run_time;
+			remove_process(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, &total_free_memory, &next_finishing_process);
+			printf("time %d: Process %c removed:\n", time, next_finishing_process->process_id);
+			print_memory(Physical_Memory, frames_per_line, total_frames);
 			/* take process out of Memory */
 			/* will involve changing process id character into '.' in Physical_Memory array */
 			/* will also involve taking pointer to process out of Mem_Processes */
 		}
 		update_times( &Mem_Processes, num_processes_in_memory, time_passed, &next_finishing_process);
 	}
+	printf("time %dms: Simulator ended (Contigious -- First-Fit)\n", time);
 	
 	free(Physical_Memory);
 	free(line);
