@@ -139,7 +139,13 @@ void remove_process(char** Physical_Memory, Process*** Mem_Processes, int* num_p
 		{
 			for (int k = i; k < (*num_processes_in_memory - 1); k++)
 			{
-				(*Mem_Processes)[i] = (*Mem_Processes)[i+1];
+				#ifdef DEBUG_MODE
+				printf(">>*Mem_Process[%d] was %c\n", k, (*Mem_Processes)[k]->process_id);
+				#endif
+				(*Mem_Processes)[k] = (*Mem_Processes)[k+1];
+				#ifdef DEBUG_MODE
+				printf(">>*Mem_Process[%d] is now %c\n", k, (*Mem_Processes)[k]->process_id);
+				#endif
 			}
 			(*num_processes_in_memory)--;
 			(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
@@ -402,7 +408,7 @@ int main(int argc, char const *argv[])
 	int total_free_memory = total_frames;
 	int test = 0;
 	
-	printf("time %dms: Simulator started (Contigious -- First-Fit)\n", time);
+	printf("time %dms: Simulator started (Contiguous -- First-Fit)\n", time);
 	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
 	//while (test < 6)
 	{
@@ -468,7 +474,7 @@ int main(int argc, char const *argv[])
 		printf("\n");
 		#endif
 	}
-	printf("time %dms: Simulator ended (Contigious -- First-Fit)\n", time);
+	printf("time %dms: Simulator ended (Contiguous -- First-Fit)\n", time);
 	
 	free(Physical_Memory);
 	free(line);
