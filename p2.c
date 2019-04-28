@@ -147,6 +147,7 @@ void remove_process(char** Physical_Memory, Process*** Mem_Processes, int* num_p
 		}
 	}
 	(*total_free_memory) += (*process_being_removed)->p_mem;
+	(*process_being_removed) = NULL;
 }
 
 int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes, 
@@ -446,17 +447,24 @@ int main(int argc, char const *argv[])
 		{
 			//time_passed = next_finishing_process->rem_run_time;
 			time += next_finishing_process->rem_run_time;
-			remove_process(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, &total_free_memory, &next_finishing_process);
 			printf("time %dms: Process %c removed:\n", time, next_finishing_process->process_id);
+			remove_process(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, &total_free_memory, &next_finishing_process);
+			#ifdef DEBUG_MODE
+			printf("there are %d processes in memory\n", num_processes_in_memory); 
+			#endif
 			print_memory(Physical_Memory, frames_per_line, total_frames);
 			/* take process out of Memory */
 			/* will involve changing process id character into '.' in Physical_Memory array */
 			/* will also involve taking pointer to process out of Mem_Processes */
 		}
 		//printf("HELLO5\n");
-		update_times( &Mem_Processes, num_processes_in_memory, time, &next_finishing_process);
-		//printf("HELLO5\n");
+		update_times(&Mem_Processes, num_processes_in_memory, time, &next_finishing_process);
+		//printf("HELLO6\n");
 		#ifdef DEBUG_MODE
+		if (num_processes_in_memory >= 1)
+		{
+			printf("next_finishing_process is now %c\n", next_finishing_process->process_id);
+		}
 		printf("\n");
 		#endif
 	}
