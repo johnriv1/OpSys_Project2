@@ -116,9 +116,112 @@ void print_processes(Process* all_processes,int all_processes_size)
 	}
 }
 
-void update_times(Process*** Mem_Processes, int time_passed)
+int defragmentation()
+{
+
+}
+
+/* TURN ALL OF THE APPROPRIATE LETTERS BACK INTO '.' 
+   AND REMOVE PROCESS FROM Mem_Processes
+   AND DECREMENT num_processes_in_memory */
+int remove_process()
+{
+
+}
+
+int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes, 
+	int* num_processes_in_memory, char* alg, int* total_free_memory, Process* process_loading_in)
+{
+	if ((*total_free_memory) < process_loading_in->p_mem)
+	{
+		return 0;
+	}
+	else
+	{
+		int enough_room = 0;
+		if (strcmp(alg, "First Fit") == 0)
+		{
+			int count = 0;
+			int first = 0;
+			for (int i = 0; i < strlen(*Physical_Memory); i++)
+			{
+				if ((*Physical_Memory)[i] == '.')
+				{
+					if (count == 0)
+					{
+						first = i;
+					}
+					count++;
+					//printf("Count is now %d\n", count);
+				}
+				else if ((*Physical_Memory)[i] != '.')
+				{
+					count = 0;
+					//printf("Reset count\n");
+				}
+				if (count ==  process_loading_in->p_mem)
+				{
+					enough_room = 1;
+					break;
+				}
+			}
+			if (enough_room == 1)
+			{
+				for (int i = 0; i < process_loading_in->p_mem; i++)
+				{
+					(*Physical_Memory)[first + i] = process_loading_in->process_id;
+				}
+				(*total_free_memory) -= process_loading_in->p_mem;
+				/* add process to Mem_Processes */
+				(*num_processes_in_memory)++;
+				if ((*Mem_Processes) == NULL)
+				{
+					(*Mem_Processes) = calloc(*num_processes_in_memory, sizeof(int*));
+				}
+				else
+				{
+					(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
+				}
+				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
+			}
+		}
+		/*else if (strcmp(alg, "Next Fit"))
+		{
+		
+		}*/
+		/*else if (strcmp(alg, "Best Fit"))
+		{
+		
+		}*/
+		return enough_room;
+	}
+}
+
+/* attempt to put process in Memory */
+/* will be a function that take in best fit, next fit, or first fit as variables*/
+/* will also take Mem_Processes, ,and probably a pointer the process being loaded in*/
+/* make it return indicator about whether process loaded in or not */
+
+void update_times(Process*** Mem_Processes, int num_processes_in_memory, int time_passed, Process** next_finishing_process)
 {
 	/*this function will loop through Mem_Processes and decrease their rem_run_times by appropriate amount*/
+	int least_rem_run_time;
+	if ((*next_finishing_process) == NULL)
+	{
+		least_rem_run_time = 0;
+	}
+	else
+	{
+		least_rem_run_time = ((*next_finishing_process) -> rem_run_time) - time_passed;
+	}
+	for (int i = 0; i < num_processes_in_memory; i++)
+	{
+		(*Mem_Processes)[i]->rem_run_time -= time_passed;
+		if (least_rem_run_time > ((*Mem_Processes)[i]->rem_run_time))
+		{
+			(*next_finishing_process) = (*Mem_Processes)[i];
+		}
+	}
 }
 
 int main(int argc, char const *argv[])
@@ -259,29 +362,51 @@ int main(int argc, char const *argv[])
 	Process* next_finishing_process = NULL;
 	/* will also set up an array of pointers to (structure in memory) so that we don't have to check if every process in all_processes is in memory when updating rem_time */
 	Process** Mem_Processes = NULL;
+	int num_processes_in_memory = 0;
 	int time = 0;
 	/*the following variable will be decreased when process is loaded into memory and increased when taken out of memory*/
 	/*will be needed to see if we should do defragmentation or if we should skip process*/
 	int total_free_memory = total_frames;
 	
-	/* below will end up being in a while (not finished conditon) loop */
-	/* make sure time passed value is reset every loop */
+	printf("time %dms: Simulator started (Contigious -- First-Fit)\n", time);
+	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
+	{
 		int time_passed = 0;
-		if ((next_finishing_process == NULL) || 
-			(all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time)))
+		if ((next_arrival_index < all_processes_size) && ((next_finishing_process == NULL) || (all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time))))
 		{
+			printf("Process %c arrived (requires %d frames)\n", all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
 			time_passed = all_processes[next_arrival_index].arrival_time - time; 
 			time = all_processes[next_arrival_index].arrival_time;
-			next_arrival_index ++;
-			/* attempt to put process in Memory */
-			/* will be a function that take in best fit, next fit, or first fit as variables*/
-			/* will also take Mem_Processes and probably a pointer the process being loaded in*/
-			/* make it return indicator about whether process loaded in or not */
+			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
 			/* if it didnt load in, check if there is enough total free memory */
 			/* if so, defragment and then load in process into memory */
 			/* if not, skip -> advance next arrival index without loading anything into memory */
+			if (loaded == 0)
+			{
+				if (total_free_memory >= all_processes[next_arrival_index].p_mem)
+				{
+					/*call defragment function*/
+					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
+					if (loaded == 0)
+					{
+						fprintf(stderr, "ERROR: 'loaded' return val and 'total_free_memory' val are inconsistent\n");
+					}
+					next_arrival_index ++;
+				}
+				else
+				{
+					printf("Time %d: Cannot place process %c -- skipped!\n", time, all_processes[next_arrival_index].process_id);
+					next_arrival_index ++;
+				}
+			}
+			else
+			{
+				printf("Placed process %c\n", all_processes[next_arrival_index].process_id);
+				print_memory(Physical_Memory, frames_per_line, total_frames);
+				next_arrival_index ++;
+			}
 		}
-		else if (all_processes[next_arrival_index].arrival_time >= (next_finishing_process->rem_run_time + time))
+		else if ((next_arrival_index >= all_processes_size ) || (all_processes[next_arrival_index].arrival_time >= (next_finishing_process->rem_run_time + time)))
 		{
 			time_passed = next_finishing_process->rem_run_time;
 			time += next_finishing_process->rem_run_time;
@@ -289,8 +414,8 @@ int main(int argc, char const *argv[])
 			/* will involve changing process id character into '.' in Physical_Memory array */
 			/* will also involve taking pointer to process out of Mem_Processes */
 		}
-		update_times( &Mem_Processes, time_passed);
-	
+		update_times( &Mem_Processes, num_processes_in_memory, time_passed, &next_finishing_process);
+	}
 	
 	free(Physical_Memory);
 	free(line);
