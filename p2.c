@@ -241,11 +241,11 @@ void update_times(Process*** Mem_Processes, int num_processes_in_memory, int tim
 	}
 	else
 	{
-		least_rem_run_time = ((*next_finishing_process) -> rem_run_time) - (time - (*next_finishing_process) -> arrival_time);
+		least_rem_run_time = ((*next_finishing_process) -> run_time) - (time - (*next_finishing_process) -> arrival_time);
 	}
 	for (int i = 0; i < num_processes_in_memory; i++)
 	{
-		(*Mem_Processes)[i]->rem_run_time -= (time - (*Mem_Processes)[i]->arrival_time);
+		(*Mem_Processes)[i]->rem_run_time = (*Mem_Processes)[i]->run_time - (time - (*Mem_Processes)[i]->arrival_time);
 		//printf("time_passed is %d\n", time_passed); 
 		#ifdef DEBUG_MODE
 		printf("----Process %c has rem_run_time %d\n", (*Mem_Processes)[i]->process_id,(*Mem_Processes)[i]->rem_run_time);
