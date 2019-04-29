@@ -142,7 +142,6 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 		for (int k = 0; k < (*Mem_Processes)[i]->p_mem; k++)
 		{
 			(*Physical_Memory)[pmem_index] = (*Mem_Processes)[i]->process_id;
-			pmem_index++;
 			if (k == 0)
 			{
 				if (pmem_index != (*Mem_Processes)[i]->mem_index)
@@ -151,6 +150,7 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 					(*Mem_Processes)[i]->mem_index = pmem_index;
 				}
 			}
+			pmem_index++;
 		}
 	}
 	for (; pmem_index < strlen(*Physical_Memory); pmem_index++)
@@ -160,9 +160,16 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 	/*increment time, and arrival times for all upcoming processes*/
 	int defrag_time_increment = num_frames_moved*t_memmove;
 	(*time) += defrag_time_increment;
-	for (int i = next_arrival_index; i < all_processes_size; i++)
+	//for (int i = next_arrival_index; i < all_processes_size; i++)
+	for (int i = 0; i < all_processes_size; i++)
 	{
+		#ifdef DEBUG_MODE
+		printf("+++Process %c arrival time was %d\n", (*all_processes)[i].process_id, (*all_processes)[i].arrival_time);
+		#endif
 		(*all_processes)[i].arrival_time += defrag_time_increment;
+		#ifdef DEBUG_MODE
+		printf("+++Process %c arrival time is now %d\n", (*all_processes)[i].process_id, (*all_processes)[i].arrival_time);
+		#endif
 	}
 }
 
@@ -305,6 +312,7 @@ void update_times(Process*** Mem_Processes, int num_processes_in_memory, int tim
 		if (least_rem_run_time > ((*Mem_Processes)[i]->rem_run_time))
 		{
 			(*next_finishing_process) = (*Mem_Processes)[i];
+			least_rem_run_time = ((*Mem_Processes)[i]->rem_run_time);
 		}
 	}
 }
