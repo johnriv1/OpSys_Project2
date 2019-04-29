@@ -82,7 +82,10 @@ int compare_process(const void *p1, const void *p2)
    }
 }
 
-/*sort array of pointers to struct by their arrival time*/
+/* must keep track for next fit */
+int first_pos_after_last_process = 0;
+
+/*sort array of pointers to struct by their order in memory*/
 int sort_mem(const void *p1, const void *p2)
 {
 	const Process *elem1 = *(Process **)p1;
@@ -94,6 +97,27 @@ int sort_mem(const void *p1, const void *p2)
 		return 1;
 	return 0;
 }
+
+/*sort array of pointers to struct by their arrival time/order they were placed in memory*/
+/*
+int sort_mem_arrival_time(const void *p1, const void *p2)
+{
+	const Process *elem1 = *(Process **)p1;
+	const Process *elem2 = *(Process **)p2;
+	
+	if (elem1->arrival_time < elem2->arrival_time)
+		return -1;
+	else if (elem1->arrival_time > elem2->arrival_time)
+		return 1;
+	else
+	{
+		if (elem1->process_id < elem2->process_id)
+  			return -1;
+  		else
+  			return 1;
+	}
+}
+*/
 
 void print_memory(char* Physical_Memory, int frames_per_line, int total_frames)
 {
@@ -148,6 +172,12 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 			{
 				if (pmem_index != (*Mem_Processes)[i]->mem_index)
 				{
+					/*have to update global variable first_pos_after_last_process*/
+					if (((*Mem_Processes)[i]->mem_index + (*Mem_Processes)[i]->p_mem) == first_pos_after_last_process)
+					{
+						first_pos_after_last_process = first_pos_after_last_process - ((*Mem_Processes)[i]->mem_index - pmem_index);
+					}
+					
 					num_frames_moved += (*Mem_Processes)[i]->p_mem;
 					(*Mem_Processes)[i]->mem_index = pmem_index;
 					frame_ids_moved_array[frame_ids_moved_array_size] = (*Mem_Processes)[i]->process_id;
@@ -284,16 +314,92 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
 			}
 		}
-		/*else if (strcmp(alg, "Next Fit"))
+		else if (strcmp(alg, "Next Fit") == 0)
 		{
-		
-		}*/
-		/*else if (strcmp(alg, "Best Fit"))
+			int count = 0;
+			int first = first_pos_after_last_process;
+			/*loop from first_pos_after_last_process too the end*/
+			for (int i = first_pos_after_last_process; i < strlen(*Physical_Memory); i++)
+			{
+				if ((*Physical_Memory)[i] == '.')
+				{
+					if (count == 0)
+					{
+						first = i;
+					}
+					count++;
+					//printf("Count is now %d\n", count);
+				}
+				else if ((*Physical_Memory)[i] != '.')
+				{
+					count = 0;
+					//printf("Reset count\n");
+				}
+				if (count ==  process_loading_in->p_mem)
+				{
+					enough_room = 1;
+					break;
+				}
+			}
+			/*if not enough room found, start at the top and search until we've checked entire 
+				physical memory*/
+			if ((first_pos_after_last_process!=0) && (enough_room == 0))
+			{
+				count = 0;
+				first = 0;
+				//for (int i = 0; i < first_pos_after_last_process; i++)
+				for (int i = 0; i < strlen(*Physical_Memory); i++)
+				{
+					if ((*Physical_Memory)[i] == '.')
+					{
+						if (count == 0)
+						{
+							first = i;
+						}
+						count++;
+						//printf("Count is now %d\n", count);
+					}
+					else if ((*Physical_Memory)[i] != '.')
+					{
+						count = 0;
+						//printf("Reset count\n");
+					}
+					if (count ==  process_loading_in->p_mem)
+					{
+						enough_room = 1;
+						break;
+					}
+				}
+			}
+			if (enough_room == 1)
+			{
+				process_loading_in->mem_index = first;
+				for (int i = 0; i < process_loading_in->p_mem; i++)
+				{
+					(*Physical_Memory)[first + i] = process_loading_in->process_id;
+				}
+				(*total_free_memory) -= process_loading_in->p_mem;
+				/* add process to Mem_Processes */
+				(*num_processes_in_memory)++;
+				if ((*Mem_Processes) == NULL)
+				{
+					(*Mem_Processes) = calloc(*num_processes_in_memory, sizeof(int*));
+				}
+				else
+				{
+					(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
+				}
+				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
+				
+				first_pos_after_last_process = process_loading_in->mem_index + process_loading_in->p_mem;
+			}
+		}
+		/*else if (strcmp(alg, "Best Fit") == 0)
 		{
 		
 		}*/
 		/*
-		else if (strcmp(alg, "Noncontiguous"))
+		else if (strcmp(alg, "Noncontiguous") == 0)
 		*/
 		return enough_room;
 	}
@@ -475,6 +581,8 @@ int main(int argc, char const *argv[])
 	int next_arrival_index = 0;
 	/* in our update rem_time function, we'll also update the value of next_finishinf_process */
 	Process* next_finishing_process = NULL;
+	/* this will be updated every time a function is placed in memory,
+	Process* most_recently_placed_process = NULL; */
 	/* will also set up an array of pointers to (structure in memory) so that we don't have to check if every process in all_processes is in memory when updating rem_time */
 	Process** Mem_Processes = NULL;
 	int num_processes_in_memory = 0;
@@ -484,7 +592,7 @@ int main(int argc, char const *argv[])
 	int total_free_memory = total_frames;
 	int test = 0;
 	
-	printf("time %dms: Simulator started (Contiguous -- First-Fit)\n", time);
+	printf("time %dms: Simulator started (Contiguous -- Next-Fit)\n", time);
 	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
 	//while (test < 6)
 	{
@@ -496,7 +604,8 @@ int main(int argc, char const *argv[])
 			time = all_processes[next_arrival_index].arrival_time;
 			printf("time %dms: Process %c arrived (requires %d frames)\n", time,  all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
 			//time_passed = all_processes[next_arrival_index].arrival_time - time;
-			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
+			//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
+			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
 			/* if it didnt load in, check if there is enough total free memory */
 			/* if so, defragment and then load in process into memory */
 			/* if not, skip -> advance next arrival index without loading anything into memory */
@@ -507,7 +616,8 @@ int main(int argc, char const *argv[])
 					printf("time %dms: Cannot place process %c -- starting defragmentation\n", time, all_processes[next_arrival_index].process_id);
 					defragmentation(&Physical_Memory, &Mem_Processes, num_processes_in_memory, &time, t_memmove, &all_processes, all_processes_size, next_arrival_index);
 					//printf("time %dms: Defragmentation complete\n", time);
-					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
+					//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
+					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
 					printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
 					print_memory(Physical_Memory, frames_per_line, total_frames);
 					if (loaded == 0)
@@ -551,7 +661,7 @@ int main(int argc, char const *argv[])
 		printf("\n");
 		#endif
 	}
-	printf("time %dms: Simulator ended (Contiguous -- First-Fit)\n", time);
+	printf("time %dms: Simulator ended (Contiguous -- Next-Fit)\n", time);
 	
 	free(Physical_Memory);
 	free(line);
