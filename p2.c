@@ -137,6 +137,8 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 	qsort((*Mem_Processes), num_processes_in_memory, sizeof(Process *), sort_mem);
 	int pmem_index = 0;
 	int num_frames_moved = 0;
+	char* frame_ids_moved_array=calloc(strlen(*Physical_Memory), sizeof(char));
+	int frame_ids_moved_array_size = 0;
 	for (int i = 0; i < num_processes_in_memory; i++)
 	{
 		for (int k = 0; k < (*Mem_Processes)[i]->p_mem; k++)
@@ -148,6 +150,8 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 				{
 					num_frames_moved += (*Mem_Processes)[i]->p_mem;
 					(*Mem_Processes)[i]->mem_index = pmem_index;
+					frame_ids_moved_array[frame_ids_moved_array_size] = (*Mem_Processes)[i]->process_id;
+					frame_ids_moved_array_size++;
 				}
 			}
 			pmem_index++;
@@ -171,6 +175,21 @@ void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_p
 		printf("+++Process %c arrival time is now %d\n", (*all_processes)[i].process_id, (*all_processes)[i].arrival_time);
 		#endif
 	}
+	printf("time %dms: Defragmentation complete (moved %d frames:", *time, num_frames_moved);
+	//printf("frame_ids_moved_array_size IS %d\n", frame_ids_moved_array_size);
+	for (int i = 0; i < frame_ids_moved_array_size; i++)
+	{
+		if (i == frame_ids_moved_array_size - 1)
+		{
+			printf(" %c", frame_ids_moved_array[i]);
+		}
+		else
+		{
+			printf(" %c,", frame_ids_moved_array[i]);
+		}
+	}
+	printf(")\n");
+	free(frame_ids_moved_array);
 }
 
 /* TURN ALL OF THE APPROPRIATE LETTERS BACK INTO '.' 
@@ -273,6 +292,9 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 		{
 		
 		}*/
+		/*
+		else if (strcmp(alg, "Noncontiguous"))
+		*/
 		return enough_room;
 	}
 }
@@ -484,7 +506,7 @@ int main(int argc, char const *argv[])
 				{
 					printf("time %dms: Cannot place process %c -- starting defragmentation\n", time, all_processes[next_arrival_index].process_id);
 					defragmentation(&Physical_Memory, &Mem_Processes, num_processes_in_memory, &time, t_memmove, &all_processes, all_processes_size, next_arrival_index);
-					printf("time %dms: Defragmentation complete\n", time);
+					//printf("time %dms: Defragmentation complete\n", time);
 					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
 					printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
 					print_memory(Physical_Memory, frames_per_line, total_frames);
