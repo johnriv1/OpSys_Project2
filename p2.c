@@ -56,6 +56,8 @@ typedef struct
 	int arrival_time;
 	int run_time;
 	int rem_run_time;
+	/*will denote the position of first 'letter' of process in physical memory*/
+	int mem_index;
 }  Process;
 
 int compare_process(const void *p1, const void *p2)
@@ -78,6 +80,19 @@ int compare_process(const void *p1, const void *p2)
    		return 0;
    	}
    }
+}
+
+/*sort array of pointers to struct by their arrival time*/
+int sort_mem(const void *p1, const void *p2)
+{
+	const Process *elem1 = *(Process **)p1;
+	const Process *elem2 = *(Process **)p2;
+	
+	if (elem1->mem_index < elem2->mem_index)
+		return -1;
+	else if (elem1->mem_index > elem2->mem_index)
+		return 1;
+	return 0;
 }
 
 void print_memory(char* Physical_Memory, int frames_per_line, int total_frames)
@@ -116,9 +131,39 @@ void print_processes(Process* all_processes,int all_processes_size)
 	}
 }
 
-void defragmentation()
+void defragmentation(char** Physical_Memory, Process*** Mem_Processes, int num_processes_in_memory, int* time, int t_memmove, Process** all_processes, int all_processes_size, int next_arrival_index)
 {
-
+	/*sort processes in memory such that we may copy them back in correct order*/
+	qsort((*Mem_Processes), num_processes_in_memory, sizeof(Process *), sort_mem);
+	int pmem_index = 0;
+	int num_frames_moved = 0;
+	for (int i = 0; i < num_processes_in_memory; i++)
+	{
+		for (int k = 0; k < (*Mem_Processes)[i]->p_mem; k++)
+		{
+			(*Physical_Memory)[pmem_index] = (*Mem_Processes)[i]->process_id;
+			pmem_index++;
+			if (k == 0)
+			{
+				if (pmem_index != (*Mem_Processes)[i]->mem_index)
+				{
+					num_frames_moved += (*Mem_Processes)[i]->p_mem;
+					(*Mem_Processes)[i]->mem_index = pmem_index;
+				}
+			}
+		}
+	}
+	for (; pmem_index < strlen(*Physical_Memory); pmem_index++)
+	{
+		(*Physical_Memory)[pmem_index] = '.';
+	}
+	/*increment time, and arrival times for all upcoming processes*/
+	int defrag_time_increment = num_frames_moved*t_memmove;
+	(*time) += defrag_time_increment;
+	for (int i = next_arrival_index; i < all_processes_size; i++)
+	{
+		(*all_processes)[i].arrival_time += defrag_time_increment;
+	}
 }
 
 /* TURN ALL OF THE APPROPRIATE LETTERS BACK INTO '.' 
@@ -194,6 +239,7 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 			}
 			if (enough_room == 1)
 			{
+				process_loading_in->mem_index = first;
 				for (int i = 0; i < process_loading_in->p_mem; i++)
 				{
 					(*Physical_Memory)[first + i] = process_loading_in->process_id;
@@ -428,8 +474,12 @@ int main(int argc, char const *argv[])
 			{
 				if (total_free_memory >= all_processes[next_arrival_index].p_mem)
 				{
-					/*call defragment function*/
+					printf("time %dms: Cannot place process %c -- starting defragmentation\n", time, all_processes[next_arrival_index].process_id);
+					defragmentation(&Physical_Memory, &Mem_Processes, num_processes_in_memory, &time, t_memmove, &all_processes, all_processes_size, next_arrival_index);
+					printf("time %dms: Defragmentation complete\n", time);
 					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "First Fit", &total_free_memory, &all_processes[next_arrival_index]);
+					printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
+					print_memory(Physical_Memory, frames_per_line, total_frames);
 					if (loaded == 0)
 					{
 						fprintf(stderr, "ERROR: 'loaded' return val and 'total_free_memory' val are inconsistent\n");
@@ -459,9 +509,6 @@ int main(int argc, char const *argv[])
 			printf("there are %d processes in memory\n", num_processes_in_memory); 
 			#endif
 			print_memory(Physical_Memory, frames_per_line, total_frames);
-			/* take process out of Memory */
-			/* will involve changing process id character into '.' in Physical_Memory array */
-			/* will also involve taking pointer to process out of Mem_Processes */
 		}
 		//printf("HELLO5\n");
 		update_times(&Mem_Processes, num_processes_in_memory, time, &next_finishing_process);
