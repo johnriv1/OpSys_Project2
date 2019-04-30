@@ -551,6 +551,9 @@ void main_alg(Process** all_processes_array, int all_processes_size, int frames_
 
 int main(int argc, char const *argv[])
 {
+
+	setvbuf( stdout, NULL, _IONBF, 0 );	
+	
 	if (argc != 5)
 	{
 		fprintf(stderr, "ERROR: Incorrect number of arguments recieved\n");
