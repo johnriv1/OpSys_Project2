@@ -429,6 +429,70 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
 			}
 		}
+		else if (strcmp(alg, "Contiguous -- Best-Fit") == 0)
+		{
+			int min_count = -1;
+			int count = 0;
+			int min_first;
+			int first = 0;
+			int enough_room_curr = 0;
+			for (int i = 0; i < strlen(*Physical_Memory); i++)
+			{
+				if ((*Physical_Memory)[i] == '.')
+				{
+					if (count == 0)
+					{
+						first = i;
+					}
+					count++;
+					//printf("Count is now %d\n", count);
+				}
+				if (count == process_loading_in->p_mem)
+				{
+					enough_room = 1;
+					enough_room_curr = 1; 
+				}
+				if (((*Physical_Memory)[i] != '.') || (i == (strlen(*Physical_Memory)-1)))
+				{
+					if (enough_room_curr == 1)
+					{
+						if (min_count == -1)
+						{
+							min_count = count;
+							min_first = first;
+						}
+						else if (min_count > count)
+						{
+							min_count = count;
+							min_first = first;
+						}
+						enough_room_curr = 0; 
+					}
+					count = 0;
+					//printf("Reset count\n");
+				}
+			}
+			if (enough_room == 1)
+			{
+				process_loading_in->mem_index = min_first;
+				for (int i = 0; i < process_loading_in->p_mem; i++)
+				{
+					(*Physical_Memory)[min_first + i] = process_loading_in->process_id;
+				}
+				(*total_free_memory) -= process_loading_in->p_mem;
+				/* add process to Mem_Processes */
+				(*num_processes_in_memory)++;
+				if ((*Mem_Processes) == NULL)
+				{
+					(*Mem_Processes) = calloc(*num_processes_in_memory, sizeof(int*));
+				}
+				else
+				{
+					(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
+				}
+				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
+			}
+		}
 		return enough_room;
 	}
 }
@@ -719,6 +783,7 @@ int main(int argc, char const *argv[])
 		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
 	}
 	printf("\n");
+	
 	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Contiguous -- Next-Fit");
 	for (int i = 0; i < all_processes_size; i++)
 	{
@@ -726,7 +791,15 @@ int main(int argc, char const *argv[])
 		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
 	}
 	printf("\n");
-
+	
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Contiguous -- Best-Fit");
+	for (int i = 0; i < all_processes_size; i++)
+	{
+		all_processes[i].rem_run_time = all_processes[i].run_time;
+		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
+	}
+	printf("\n");
+	
 	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Non-Contiguous");
 	
 	free(all_processes);
