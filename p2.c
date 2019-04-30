@@ -54,6 +54,8 @@ typedef struct
 	char process_id;
 	int p_mem;
 	int arrival_time;
+	/*arrival_time_orig just so that we can reset the arrival time value when running code multiple times for different placement algorithms*/
+	int arrival_time_orig; 
 	int run_time;
 	int rem_run_time;
 	/*will denote the position of first 'letter' of process in physical memory*/
@@ -267,7 +269,7 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 	else
 	{
 		int enough_room = 0;
-		if (strcmp(alg, "First Fit") == 0)
+		if (strcmp(alg, "First-Fit") == 0)
 		{
 			int count = 0;
 			int first = 0;
@@ -314,7 +316,7 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
 			}
 		}
-		else if (strcmp(alg, "Next Fit") == 0)
+		else if (strcmp(alg, "Next-Fit") == 0)
 		{
 			int count = 0;
 			int first = first_pos_after_last_process;
@@ -445,6 +447,108 @@ void update_times(Process*** Mem_Processes, int num_processes_in_memory, int tim
 	}
 }
 
+void main_alg(Process** all_processes_array, int all_processes_size, int frames_per_line, int total_frames, int t_memmove, char* placement_alg)
+{
+	Process* all_processes = *all_processes_array;
+	first_pos_after_last_process = 0;
+	char* Physical_Memory = calloc(total_frames, sizeof(char*));
+	for (int i = 0; i < total_frames; i++)
+	{
+		Physical_Memory[i] = '.';
+	}
+	#if DEBUG_MODE
+	print_memory(Physical_Memory, frames_per_line, total_frames);
+	#endif	
+	
+	/* this index will indicate the process in all_processes that is next to arrive */
+	int next_arrival_index = 0;
+	/* in our update rem_time function, we'll also update the value of next_finishinf_process */
+	Process* next_finishing_process = NULL;
+	/* this will be updated every time a function is placed in memory,
+	Process* most_recently_placed_process = NULL; */
+	/* will also set up an array of pointers to (structure in memory) so that we don't have to check if every process in all_processes is in memory when updating rem_time */
+	Process** Mem_Processes = NULL;
+	int num_processes_in_memory = 0;
+	int time = 0;
+	/*the following variable will be decreased when process is loaded into memory and increased when taken out of memory*/
+	/*will be needed to see if we should do defragmentation or if we should skip process*/
+	int total_free_memory = total_frames;
+	int test = 0;
+	
+	printf("time %dms: Simulator started (Contiguous -- %s)\n", time, placement_alg);
+	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
+	//while (test < 6)
+	{
+		test++;
+		//printf("HELLO\n");
+		//int time_passed = 0;
+		if ((next_arrival_index < all_processes_size) && ((next_finishing_process == NULL) || (all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time))))
+		{
+			time = all_processes[next_arrival_index].arrival_time;
+			printf("time %dms: Process %c arrived (requires %d frames)\n", time,  all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
+			//time_passed = all_processes[next_arrival_index].arrival_time - time;
+			//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
+			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, placement_alg, &total_free_memory, &all_processes[next_arrival_index]);
+			/* if it didnt load in, check if there is enough total free memory */
+			/* if so, defragment and then load in process into memory */
+			/* if not, skip -> advance next arrival index without loading anything into memory */
+			if (loaded == 0)
+			{
+				if (total_free_memory >= all_processes[next_arrival_index].p_mem)
+				{
+					printf("time %dms: Cannot place process %c -- starting defragmentation\n", time, all_processes[next_arrival_index].process_id);
+					defragmentation(&Physical_Memory, &Mem_Processes, num_processes_in_memory, &time, t_memmove, &all_processes, all_processes_size, next_arrival_index);
+					//printf("time %dms: Defragmentation complete\n", time);
+					//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
+					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, placement_alg, &total_free_memory, &all_processes[next_arrival_index]);
+					printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
+					print_memory(Physical_Memory, frames_per_line, total_frames);
+					if (loaded == 0)
+					{
+						fprintf(stderr, "ERROR: 'loaded' return val and 'total_free_memory' val are inconsistent\n");
+					}
+					next_arrival_index ++;
+				}
+				else
+				{
+					printf("time %dms: Cannot place process %c -- skipped!\n", time, all_processes[next_arrival_index].process_id);
+					next_arrival_index ++;
+				}
+			}
+			else
+			{
+				printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
+				print_memory(Physical_Memory, frames_per_line, total_frames);
+				next_arrival_index ++;
+			}
+		}
+		else if ((next_arrival_index >= all_processes_size ) || (all_processes[next_arrival_index].arrival_time >= (next_finishing_process->rem_run_time + time)))
+		{
+			//time_passed = next_finishing_process->rem_run_time;
+			time += next_finishing_process->rem_run_time;
+			printf("time %dms: Process %c removed:\n", time, next_finishing_process->process_id);
+			remove_process(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, &total_free_memory, &next_finishing_process);
+			#ifdef DEBUG_MODE
+			printf("there are %d processes in memory\n", num_processes_in_memory); 
+			#endif
+			print_memory(Physical_Memory, frames_per_line, total_frames);
+		}
+		//printf("HELLO5\n");
+		update_times(&Mem_Processes, num_processes_in_memory, time, &next_finishing_process);
+		//printf("HELLO6\n");
+		#ifdef DEBUG_MODE
+		if (num_processes_in_memory >= 1)
+		{
+			printf("next_finishing_process is now %c\n", next_finishing_process->process_id);
+		}
+		printf("\n");
+		#endif
+	}
+	printf("time %dms: Simulator ended (Contiguous -- %s)\n", time, placement_alg);
+	
+	free(Physical_Memory);
+}
+
 int main(int argc, char const *argv[])
 {
 	if (argc != 5)
@@ -476,7 +580,7 @@ int main(int argc, char const *argv[])
 	const char* input_file = argv[3];
 	/* The fourth argument is the time, in milliseconds, that it takes to move one frame of memory during defragmentation.*/
 	int t_memmove = atoi(argv[4]);
-	
+	#if 0
 	char* Physical_Memory = calloc(total_frames, sizeof(char*));
 	for (int i = 0; i < total_frames; i++)
 	{
@@ -485,7 +589,7 @@ int main(int argc, char const *argv[])
 	#if DEBUG_MODE
 	print_memory(Physical_Memory, frames_per_line, total_frames);
 	#endif
-	
+	#endif
 	Process* all_processes = NULL;
 	int all_processes_size = 0;
 	
@@ -552,6 +656,7 @@ int main(int argc, char const *argv[])
 			all_processes[all_processes_size - 1].process_id = current_process_id;
 			all_processes[all_processes_size - 1].p_mem = current_process_mem;
 			all_processes[all_processes_size - 1].arrival_time = atoi(ptr);
+			all_processes[all_processes_size - 1].arrival_time_orig = atoi(ptr);
 			#if DEBUG_MODE
 			printf("this process has arrival_time %d\n", all_processes[all_processes_size - 1].arrival_time);
 			#endif
@@ -577,98 +682,23 @@ int main(int argc, char const *argv[])
 	printf("\n");
 	#endif
 	
-	/* this index will indicate the process in all_processes that is next to arrive */
-	int next_arrival_index = 0;
-	/* in our update rem_time function, we'll also update the value of next_finishinf_process */
-	Process* next_finishing_process = NULL;
-	/* this will be updated every time a function is placed in memory,
-	Process* most_recently_placed_process = NULL; */
-	/* will also set up an array of pointers to (structure in memory) so that we don't have to check if every process in all_processes is in memory when updating rem_time */
-	Process** Mem_Processes = NULL;
-	int num_processes_in_memory = 0;
-	int time = 0;
-	/*the following variable will be decreased when process is loaded into memory and increased when taken out of memory*/
-	/*will be needed to see if we should do defragmentation or if we should skip process*/
-	int total_free_memory = total_frames;
-	int test = 0;
-	
-	printf("time %dms: Simulator started (Contiguous -- Next-Fit)\n", time);
-	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
-	//while (test < 6)
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "First-Fit");
+	/*reset necessary values; call this before ever recall of main_alg*/
+	for (int i = 0; i < all_processes_size; i++)
 	{
-		test++;
-		//printf("HELLO\n");
-		//int time_passed = 0;
-		if ((next_arrival_index < all_processes_size) && ((next_finishing_process == NULL) || (all_processes[next_arrival_index].arrival_time < (next_finishing_process->rem_run_time + time))))
-		{
-			time = all_processes[next_arrival_index].arrival_time;
-			printf("time %dms: Process %c arrived (requires %d frames)\n", time,  all_processes[next_arrival_index].process_id, all_processes[next_arrival_index].p_mem);
-			//time_passed = all_processes[next_arrival_index].arrival_time - time;
-			//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
-			int loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
-			/* if it didnt load in, check if there is enough total free memory */
-			/* if so, defragment and then load in process into memory */
-			/* if not, skip -> advance next arrival index without loading anything into memory */
-			if (loaded == 0)
-			{
-				if (total_free_memory >= all_processes[next_arrival_index].p_mem)
-				{
-					printf("time %dms: Cannot place process %c -- starting defragmentation\n", time, all_processes[next_arrival_index].process_id);
-					defragmentation(&Physical_Memory, &Mem_Processes, num_processes_in_memory, &time, t_memmove, &all_processes, all_processes_size, next_arrival_index);
-					//printf("time %dms: Defragmentation complete\n", time);
-					//put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
-					loaded = put_process_into_memory(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, "Next Fit", &total_free_memory, &all_processes[next_arrival_index]);
-					printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
-					print_memory(Physical_Memory, frames_per_line, total_frames);
-					if (loaded == 0)
-					{
-						fprintf(stderr, "ERROR: 'loaded' return val and 'total_free_memory' val are inconsistent\n");
-					}
-					next_arrival_index ++;
-				}
-				else
-				{
-					printf("time %dms: Cannot place process %c -- skipped!\n", time, all_processes[next_arrival_index].process_id);
-					next_arrival_index ++;
-				}
-			}
-			else
-			{
-				printf("time %dms: Placed process %c:\n", time, all_processes[next_arrival_index].process_id);
-				print_memory(Physical_Memory, frames_per_line, total_frames);
-				next_arrival_index ++;
-			}
-		}
-		else if ((next_arrival_index >= all_processes_size ) || (all_processes[next_arrival_index].arrival_time >= (next_finishing_process->rem_run_time + time)))
-		{
-			//time_passed = next_finishing_process->rem_run_time;
-			time += next_finishing_process->rem_run_time;
-			printf("time %dms: Process %c removed:\n", time, next_finishing_process->process_id);
-			remove_process(&Physical_Memory, &Mem_Processes, &num_processes_in_memory, &total_free_memory, &next_finishing_process);
-			#ifdef DEBUG_MODE
-			printf("there are %d processes in memory\n", num_processes_in_memory); 
-			#endif
-			print_memory(Physical_Memory, frames_per_line, total_frames);
-		}
-		//printf("HELLO5\n");
-		update_times(&Mem_Processes, num_processes_in_memory, time, &next_finishing_process);
-		//printf("HELLO6\n");
-		#ifdef DEBUG_MODE
-		if (num_processes_in_memory >= 1)
-		{
-			printf("next_finishing_process is now %c\n", next_finishing_process->process_id);
-		}
-		printf("\n");
-		#endif
+		all_processes[i].rem_run_time = all_processes[i].run_time;
+		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
 	}
-	printf("time %dms: Simulator ended (Contiguous -- Next-Fit)\n", time);
+	printf("\n");
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Next-Fit");
 	
-	free(Physical_Memory);
-	free(line);
 	free(all_processes);
+	free(line);
 	fclose(fp);
 	return EXIT_SUCCESS;
 }
+
+
 
 
 
