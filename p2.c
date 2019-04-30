@@ -269,7 +269,7 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 	else
 	{
 		int enough_room = 0;
-		if (strcmp(alg, "First-Fit") == 0)
+		if (strcmp(alg, "Contiguous -- First-Fit") == 0)
 		{
 			int count = 0;
 			int first = 0;
@@ -316,7 +316,7 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
 			}
 		}
-		else if (strcmp(alg, "Next-Fit") == 0)
+		else if (strcmp(alg, "Contiguous -- Next-Fit") == 0)
 		{
 			int count = 0;
 			int first = first_pos_after_last_process;
@@ -396,13 +396,39 @@ int put_process_into_memory(char** Physical_Memory, Process*** Mem_Processes,
 				first_pos_after_last_process = process_loading_in->mem_index + process_loading_in->p_mem;
 			}
 		}
-		/*else if (strcmp(alg, "Best Fit") == 0)
+		else if (strcmp(alg, "Non-Contiguous") == 0)
 		{
-		
-		}*/
-		/*
-		else if (strcmp(alg, "Noncontiguous") == 0)
-		*/
+			int count = 0;
+			for (int i = 0; i < strlen(*Physical_Memory); i++)
+			{
+				if ((*Physical_Memory)[i] == '.')
+				{
+					(*Physical_Memory)[i] = process_loading_in->process_id;
+					count++;
+					//printf("Count is now %d\n", count);
+				}
+				if (count == process_loading_in->p_mem)
+				{
+					enough_room = 1;
+					break;
+				}
+			}
+			if (enough_room == 1)
+			{
+				(*total_free_memory) -= process_loading_in->p_mem;
+				/* add process to Mem_Processes */
+				(*num_processes_in_memory)++;
+				if ((*Mem_Processes) == NULL)
+				{
+					(*Mem_Processes) = calloc(*num_processes_in_memory, sizeof(int*));
+				}
+				else
+				{
+					(*Mem_Processes) = realloc((*Mem_Processes), (*num_processes_in_memory)*sizeof(Process *));
+				}
+				(*Mem_Processes)[(*num_processes_in_memory)-1] = process_loading_in;
+			}
+		}
 		return enough_room;
 	}
 }
@@ -475,7 +501,7 @@ void main_alg(Process** all_processes_array, int all_processes_size, int frames_
 	int total_free_memory = total_frames;
 	int test = 0;
 	
-	printf("time %dms: Simulator started (Contiguous -- %s)\n", time, placement_alg);
+	printf("time %dms: Simulator started (%s)\n", time, placement_alg);
 	while ((next_arrival_index < all_processes_size) || (num_processes_in_memory > 0))
 	//while (test < 6)
 	{
@@ -544,7 +570,7 @@ void main_alg(Process** all_processes_array, int all_processes_size, int frames_
 		printf("\n");
 		#endif
 	}
-	printf("time %dms: Simulator ended (Contiguous -- %s)\n", time, placement_alg);
+	printf("time %dms: Simulator ended (%s)\n", time, placement_alg);
 	
 	free(Physical_Memory);
 }
@@ -684,8 +710,8 @@ int main(int argc, char const *argv[])
 	print_processes(all_processes,all_processes_size);
 	printf("\n");
 	#endif
-	
-	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "First-Fit");
+
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Contiguous -- First-Fit");
 	/*reset necessary values; call this before ever recall of main_alg*/
 	for (int i = 0; i < all_processes_size; i++)
 	{
@@ -693,7 +719,15 @@ int main(int argc, char const *argv[])
 		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
 	}
 	printf("\n");
-	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Next-Fit");
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Contiguous -- Next-Fit");
+	for (int i = 0; i < all_processes_size; i++)
+	{
+		all_processes[i].rem_run_time = all_processes[i].run_time;
+		all_processes[i].arrival_time = all_processes[i].arrival_time_orig;
+	}
+	printf("\n");
+
+	main_alg(&all_processes, all_processes_size, frames_per_line, total_frames, t_memmove, "Non-Contiguous");
 	
 	free(all_processes);
 	free(line);
